@@ -126,9 +126,14 @@ class ApiClient {
   }
 
   // Chat methods
-  async chat(messages: Array<{ role: string; content: string }>, conversationId?: string) {
+  async chat(
+    messages: Array<{ role: string; content: string }>, 
+    conversationId?: string,
+    model?: string
+  ) {
     const params = new URLSearchParams()
     if (conversationId) params.append("conversation_id", conversationId)
+    if (model) params.append("model", model)
 
     return this.request<{
       response: string
