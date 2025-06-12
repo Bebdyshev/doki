@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   FileText,
@@ -24,6 +25,8 @@ import {
   Calculator,
   Globe,
   ChevronDown,
+  Sparkles,
+  AtSign,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { RichTextEditor } from "@/components/rich-text-editor"
@@ -53,6 +56,8 @@ export default function EditorPage() {
   const [isChatLoading, setIsChatLoading] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [selectedTools, setSelectedTools] = useState<string[]>([])
+  const [documentsList, setDocumentsList] = useState<Document[]>([])
+  const [selectedKnowledgeDoc, setSelectedKnowledgeDoc] = useState<Document | null>(null)
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const [sidebarWidth, setSidebarWidth] = useState(384) // default 24rem (w-96)
   const isResizingRef = useRef(false)
@@ -61,8 +66,6 @@ export default function EditorPage() {
   const availableTools = [
     { id: "web_search", name: "Web Search", icon: Globe, description: "Search the web for information" },
     { id: "file_analysis", name: "File Analysis", icon: FileCode, description: "Analyze document structure" },
-    { id: "calculator", name: "Calculator", icon: Calculator, description: "Perform calculations" },
-    { id: "document_export", name: "Export Tools", icon: Download, description: "Export document options" },
   ]
 
   useEffect(() => {
@@ -73,6 +76,14 @@ export default function EditorPage() {
       setTitle("Untitled Document")
       setContent("")
     }
+
+    // Load user's documents for knowledge base selector
+    ;(async () => {
+      const res = await apiClient.getDocuments()
+      if (res.data) {
+        setDocumentsList(res.data)
+      }
+    })()
   }, [documentId])
 
   // Auto-save 2s after user stops typing or changing title
@@ -138,8 +149,8 @@ export default function EditorPage() {
     setIsSaving(false)
   }
 
-  const handleChatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Send chat message
+  const handleSend = async () => {
     if (!chatInput.trim() || isChatLoading) return
 
     const userMessage: ChatMessage = {
@@ -157,7 +168,9 @@ export default function EditorPage() {
       let plainTextContent = content
       try {
         const parsed = JSON.parse(content)
-        plainTextContent = parsed.map((n: any) => n.children?.map((c: any) => c.text).join("") || "").join("\n")
+        plainTextContent = parsed
+          .map((n: any) => n.children?.map((c: any) => c.text).join("") || "")
+          .join("\n")
       } catch {
         // If it's not JSON, use as is
       }
@@ -166,13 +179,20 @@ export default function EditorPage() {
         ? `Document context: "${title}"\n\nContent: ${plainTextContent.substring(0, 1000)}${plainTextContent.length > 1000 ? "..." : ""}`
         : "No document content available."
 
-      const messages = [
+      const messages: {role: string; content: string}[] = [
         {
           role: "system",
           content: `You are an AI assistant helping with document editing. Here's the current document context: ${contextMessage}`,
         },
-        { role: "user", content: chatInput },
+        { role: "user", content: userMessage.content },
       ]
+
+      if (selectedKnowledgeDoc) {
+        messages.unshift({
+          role: "system",
+          content: `Use knowledgebase_tool with document_id=${selectedKnowledgeDoc.id}`,
+        })
+      }
 
       const response = await apiClient.chat(messages, conversationId || undefined)
 
@@ -197,6 +217,11 @@ export default function EditorPage() {
     }
 
     setIsChatLoading(false)
+  }
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    handleSend()
   }
 
   const handleQuickAction = async (action: string) => {
@@ -391,6 +416,35 @@ export default function EditorPage() {
                     })}
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                {/* Document Selector */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 px-2">
+                      <AtSign className="h-3 w-3 mr-1" />
+                      Doc
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-72 max-h-64 overflow-auto">
+                    <DropdownMenuItem
+                      onClick={() => setSelectedKnowledgeDoc(null)}
+                      className="text-sm"
+                    >
+                      None
+                    </DropdownMenuItem>
+                    {documentsList.map((doc) => (
+                      <DropdownMenuItem
+                        key={doc.id}
+                        onClick={() => setSelectedKnowledgeDoc(doc)}
+                        className="flex flex-col space-y-0.5"
+                      >
+                        <span className="text-sm font-medium">{doc.title}</span>
+                        <span className="text-xs text-gray-500">ID: {doc.id}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Selected Tools Indicators */}
@@ -412,24 +466,39 @@ export default function EditorPage() {
                   })}
                 </div>
               )}
+
+              {/* Selected document badge */}
+              {selectedKnowledgeDoc && (
+                <div className="flex items-center space-x-1 bg-green-100 text-green-700 px-2 py-1 rounded text-xs ml-2">
+                  <AtSign className="h-3 w-3" />
+                  <span className="truncate max-w-[120px]">{selectedKnowledgeDoc.title}</span>
+                </div>
+              )}
             </div>
 
             {/* Chat Input Row */}
             <form onSubmit={handleChatSubmit} className="flex space-x-2">
               <div className="flex-1 relative">
-                <Input
+                <Textarea
                   placeholder="Ask me anything..."
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSend()
+                    }
+                  }}
                   disabled={isChatLoading}
-                  className="pr-10"
+                  className="pr-10 border-none focus-visible:ring-0 resize-none text-sm leading-relaxed"
+                  rows={1}
                 />
                 {/* Quick Actions */}
                 <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                        <Send className="h-3 w-3" />
+                        <Sparkles className="h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
