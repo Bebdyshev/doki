@@ -1,17 +1,18 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api"
 
-// Cookie utility functions
-const setCookie = (name: string, value: string, days = 7) => {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString()
-  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`
+// Local storage utility functions
+const setLocalStorage = (key: string, value: any) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(key, JSON.stringify(value))
+  }
 }
 
-const getCookie = (name: string): string | null => {
-  return document.cookie.split('; ').find(row => row.startsWith(name + '='))?.split('=')[1] || null
-}
-
-const deleteCookie = (name: string) => {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+const getLocalStorage = (key: string) => {
+  if (typeof window !== "undefined") {
+    const item = localStorage.getItem(key)
+    return item ? JSON.parse(item) : null
+  }
+  return null
 }
 
 interface ApiResponse<T> {
@@ -20,142 +21,154 @@ interface ApiResponse<T> {
 }
 
 class ApiClient {
-  private token: string | null = null
-
-  constructor() {
-    if (typeof window !== "undefined") {
-      this.token = getCookie("access_token")
-    }
-  }
-
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-    try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      }
-
-      if (this.token) {
-        headers.Authorization = `Bearer ${this.token}`
-      }
-
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
-        headers,
-      })
-
-      const data = await response.json()
-      
-      if (!response.ok) {
-        return { error: data.error || `HTTP error! status: ${response.status}` }
-      }
-      
-      return { data }
-    } catch (error) {
-      return { error: error instanceof Error ? error.message : "Unknown error" }
-    }
-  }
-
-  // Auth methods
-  async login(email: string, password: string) {
-    const response = await this.request<{ access_token: string; type: string }>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    })
-
-    if (response.data) {
-      this.token = response.data.access_token
-      setCookie("access_token", response.data.access_token)
-    }
-
-    return response
-  }
-
-  async register(name: string, email: string, password: string) {
-    const response = await this.request<{ access_token: string; type: string }>("/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ name, email, password }),
-    })
-
-    if (response.data) {
-      this.token = response.data.access_token
-      setCookie("access_token", response.data.access_token)
-    }
-
-    return response
-  }
-
-  async logout() {
-    await this.request("/auth/logout", { method: "POST" })
-    this.token = null
-    deleteCookie("access_token")
-  }
-
-  async getMe() {
-    return this.request("/auth/users/me")
-  }
-
-  // Document methods
+  // Document methods - using local storage
   async getDocuments() {
-    return this.request<Document[]>("/documents/")
+    try {
+      const documents = getLocalStorage("documents") || []
+      return { data: documents }
+    } catch (error) {
+      return { error: "Failed to get documents" }
+    }
   }
 
   async getDocument(id: number) {
-    return this.request<Document>(`/documents/${id}`)
+    try {
+      const documents = getLocalStorage("documents") || []
+      const document = documents.find((d: Document) => d.id === id)
+      if (document) {
+        return { data: document }
+      } else {
+        return { error: "Document not found" }
+      }
+    } catch (error) {
+      return { error: "Failed to get document" }
+    }
   }
 
   async createDocument(title: string, content: string) {
-    return this.request<Document>("/documents/", {
-      method: "POST",
-      body: JSON.stringify({ title, content }),
-    })
+    try {
+      const documents = getLocalStorage("documents") || []
+      const newDocument: Document = {
+        id: Date.now(), // Simple ID generation
+        user_id: 1,
+        title,
+        content,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      documents.push(newDocument)
+      setLocalStorage("documents", documents)
+      return { data: newDocument }
+    } catch (error) {
+      return { error: "Failed to create document" }
+    }
   }
 
   async updateDocument(id: number, title?: string, content?: string) {
-    return this.request<Document>(`/documents/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ title, content }),
-    })
+    try {
+      const documents = getLocalStorage("documents") || []
+      const index = documents.findIndex((d: Document) => d.id === id)
+      if (index !== -1) {
+        if (title !== undefined) documents[index].title = title
+        if (content !== undefined) documents[index].content = content
+        documents[index].updated_at = new Date().toISOString()
+        setLocalStorage("documents", documents)
+        return { data: documents[index] }
+      } else {
+        return { error: "Document not found" }
+      }
+    } catch (error) {
+      return { error: "Failed to update document" }
+    }
   }
 
   async deleteDocument(id: number) {
-    return this.request(`/documents/${id}`, { method: "DELETE" })
+    try {
+      const documents = getLocalStorage("documents") || []
+      const filteredDocuments = documents.filter((d: Document) => d.id !== id)
+      setLocalStorage("documents", filteredDocuments)
+      return { data: true }
+    } catch (error) {
+      return { error: "Failed to delete document" }
+    }
   }
 
   async exportDocument(id: number, format: "pdf" | "docx" | "txt" = "pdf") {
-    return this.request(`/documents/${id}/export?format=${format}`)
+    try {
+      const document = await this.getDocument(id)
+      if (document.data) {
+        // Simple export - just download as text for now
+        const blob = new Blob([document.data.content], { type: "text/plain" })
+        const url = URL.createObjectURL(blob)
+        const a = window.document.createElement("a")
+        a.href = url
+        a.download = `${document.data.title}.${format}`
+        a.click()
+        URL.revokeObjectURL(url)
+        return { data: true }
+      }
+      return { error: "Document not found" }
+    } catch (error) {
+      return { error: "Failed to export document" }
+    }
   }
 
-  // Chat methods
+  // Chat methods - mock implementation
   async chat(
     messages: Array<{ role: string; content: string }>, 
     conversationId?: string,
     model?: string
   ) {
-    const params = new URLSearchParams()
-    if (conversationId) params.append("conversation_id", conversationId)
-    if (model) params.append("model", model)
-
-    return this.request<{
-      response: string
-      conversation_id: string
-      tool_output: any[] | null
-    }>(`/chat/?${params.toString()}`, {
-      method: "POST",
-      body: JSON.stringify({ messages }),
-    })
+    try {
+      // Mock AI response
+      const mockResponse = {
+        response: "I'm a mock AI assistant. Your actual AI integration would go here.",
+        conversation_id: conversationId || `conv_${Date.now()}`,
+        tool_output: null
+      }
+      return { data: mockResponse }
+    } catch (error) {
+      return { error: "Failed to chat" }
+    }
   }
 
   async getConversations() {
-    return this.request("/chat/conversations")
+    return { data: [] }
   }
 
   async getConversation(id: string) {
-    return this.request(`/chat/conversation/${id}`)
+    return { data: null }
   }
 
   // Search methods
   async searchDocuments(query: string) {
-    return this.request<Document[]>(`/search/?query=${encodeURIComponent(query)}`)
+    try {
+      const documents = getLocalStorage("documents") || []
+      const filtered = documents.filter((d: Document) => 
+        d.title.toLowerCase().includes(query.toLowerCase()) ||
+        d.content.toLowerCase().includes(query.toLowerCase())
+      )
+      return { data: filtered }
+    } catch (error) {
+      return { error: "Failed to search documents" }
+    }
+  }
+
+  // Auth methods - simplified for local use
+  async login(email: string, password: string) {
+    return { data: { access_token: "mock_token", type: "Bearer" } }
+  }
+
+  async register(name: string, email: string, password: string) {
+    return { data: { access_token: "mock_token", type: "Bearer" } }
+  }
+
+  async logout() {
+    return { data: true }
+  }
+
+  async getMe() {
+    return { data: { id: 1, email: "user@example.com", name: "User", type: "user", created_at: new Date().toISOString() } }
   }
 }
 
