@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Eye, EyeOff } from "lucide-react"
 import { apiClient } from "@/lib/api"
+import GoogleLoginButton from "@/components/google-login-button"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -37,6 +38,31 @@ export default function LoginPage() {
       setError("Login failed: No data received")
     }
 
+    setIsLoading(false)
+  }
+
+  const handleGoogleSuccess = async (credential: string) => {
+    setIsLoading(true)
+
+    // Decode Google ID token to extract profile picture and name
+    try {
+      const payload = JSON.parse(atob(credential.split('.')[1]))
+      if (payload.picture) {
+        localStorage.setItem('avatar_url', payload.picture)
+      }
+      if (payload.name) {
+        localStorage.setItem('user_name', payload.name)
+      }
+    } catch (err) {
+      console.warn('Failed to decode Google token', err)
+    }
+
+    const response = await apiClient.googleLogin(credential)
+    if (response.error) {
+      setError(response.error)
+    } else {
+      router.push("/dashboard")
+    }
     setIsLoading(false)
   }
 
@@ -94,6 +120,13 @@ export default function LoginPage() {
                 {isLoading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
+            {/* Divider */}
+            <div className="flex items-center my-4">
+              <span className="flex-1 h-px bg-gray-300" />
+              <span className="px-2 text-xs text-gray-500">OR</span>
+              <span className="flex-1 h-px bg-gray-300" />
+            </div>
+            <GoogleLoginButton onSuccess={handleGoogleSuccess} />
             <div className="mt-4 text-center text-sm">
               {"Don't have an account? "}
               <Link href="/register" className="text-blue-600 hover:underline">

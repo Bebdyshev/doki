@@ -157,6 +157,20 @@ class ApiClient {
   async searchDocuments(query: string) {
     return this.request<Document[]>(`/search/?query=${encodeURIComponent(query)}`)
   }
+
+  async googleLogin(idToken: string) {
+    const response = await this.request<{ access_token: string; type: string }>("/auth/google-login", {
+      method: "POST",
+      body: JSON.stringify({ token: idToken }),
+    })
+
+    if (response.data) {
+      this.token = response.data.access_token
+      setCookie("access_token", response.data.access_token)
+    }
+
+    return response
+  }
 }
 
 export const apiClient = new ApiClient()

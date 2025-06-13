@@ -90,7 +90,7 @@ export default function EditorPage() {
   useEffect(() => {
     if (!title && !content) return
     const timeout = setTimeout(() => {
-      handleSave(true)
+        handleSave(true)
     }, 2000)
 
     return () => clearTimeout(timeout)
@@ -179,20 +179,17 @@ export default function EditorPage() {
         ? `Document context: "${title}"\n\nContent: ${plainTextContent.substring(0, 1000)}${plainTextContent.length > 1000 ? "..." : ""}`
         : "No document content available."
 
+      let systemPrompt = `You are an AI assistant helping with document editing. Here's the current document context: ${contextMessage}`
+      if (selectedKnowledgeDoc && typeof selectedKnowledgeDoc.id === 'number') {
+        userMessage.content += `\n\nInstruction: Use knowledgebase_tool with document_id=${selectedKnowledgeDoc.id}`
+      }
       const messages: {role: string; content: string}[] = [
         {
           role: "system",
-          content: `You are an AI assistant helping with document editing. Here's the current document context: ${contextMessage}`,
+          content: systemPrompt,
         },
         { role: "user", content: userMessage.content },
       ]
-
-      if (selectedKnowledgeDoc) {
-        messages.unshift({
-          role: "system",
-          content: `Use knowledgebase_tool with document_id=${selectedKnowledgeDoc.id}`,
-        })
-      }
 
       const response = await apiClient.chat(messages, conversationId || undefined)
 
@@ -267,48 +264,48 @@ export default function EditorPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col overflow-hidden">
       {/* Header across entire width */}
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}> 
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div className="flex items-center space-x-2">
-            <FileText className="h-5 w-5 text-blue-600" />
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="border-none text-lg font-medium bg-transparent focus-visible:ring-0 px-0"
-              placeholder="Untitled Document"
-            />
-            <Button variant="ghost" size="sm">
-              <Star className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          {lastSaved && <span className="text-sm text-gray-500">Saved {lastSaved.toLocaleTimeString()}</span>}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
+              <div className="flex items-center space-x-2">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="border-none text-lg font-medium bg-transparent focus-visible:ring-0 px-0"
+                  placeholder="Untitled Document"
+                />
+                <Button variant="ghost" size="sm">
+                  <Star className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              {lastSaved && <span className="text-sm text-gray-500">Saved {lastSaved.toLocaleTimeString()}</span>}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
               <DropdownMenuItem onClick={() => document && apiClient.exportDocument(document.id, "pdf")}>Export as PDF</DropdownMenuItem>
               <DropdownMenuItem onClick={() => document && apiClient.exportDocument(document.id, "docx")}>Export as DOCX</DropdownMenuItem>
               <DropdownMenuItem onClick={() => document && apiClient.exportDocument(document.id, "txt")}>Export as TXT</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
           {isSaving && <RefreshCw className="h-4 w-4 animate-spin text-gray-500" />}
-        </div>
-      </header>
+          </div>
+        </header>
 
       {/* Content Row */}
       <div className="flex flex-1 overflow-auto">
         {/* Main Editor */}
         <div className="flex-1 overflow-hidden">
-          <RichTextEditor value={content} onChange={setContent} placeholder="Start writing your document..." />
+              <RichTextEditor value={content} onChange={setContent} placeholder="Start writing your document..." />
         </div>
 
         {/* Resizer */}
@@ -324,57 +321,57 @@ export default function EditorPage() {
           className="bg-white border-l border-gray-200 flex flex-col overflow-auto min-h-0"
           style={{ width: sidebarWidth, height: 'calc(100vh - 64px)' }}
         >
-          {/* Chat Messages */}
-          <ScrollArea className="flex-1 p-4" ref={chatScrollRef}>
-            <div className="space-y-4">
-              {chatMessages.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  <Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <p className="text-sm">Ask me anything about your document!</p>
-                  <p className="text-xs mt-2">Try: "Summarize this document" or "Check for grammar errors"</p>
-                </div>
-              ) : (
-                chatMessages.map((message, index) => (
-                  <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div
-                      className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                        message.role === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
-                      }`}
-                    >
-                      <div className="flex items-start space-x-2">
-                        {message.role === "assistant" && <Bot className="h-4 w-4 mt-0.5 flex-shrink-0" />}
-                        {message.role === "user" && <User className="h-4 w-4 mt-0.5 flex-shrink-0" />}
-                        <div className="text-sm">{message.content}</div>
-                      </div>
-                      <div className="text-xs opacity-70 mt-1">{message.timestamp.toLocaleTimeString()}</div>
+        {/* Chat Messages */}
+        <ScrollArea className="flex-1 p-4" ref={chatScrollRef}>
+          <div className="space-y-4">
+            {chatMessages.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-sm">Ask me anything about your document!</p>
+                <p className="text-xs mt-2">Try: "Summarize this document" or "Check for grammar errors"</p>
+              </div>
+            ) : (
+              chatMessages.map((message, index) => (
+                <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-[80%] rounded-lg px-3 py-2 ${
+                      message.role === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
+                    }`}
+                  >
+                    <div className="flex items-start space-x-2">
+                      {message.role === "assistant" && <Bot className="h-4 w-4 mt-0.5 flex-shrink-0" />}
+                      {message.role === "user" && <User className="h-4 w-4 mt-0.5 flex-shrink-0" />}
+                      <div className="text-sm">{message.content}</div>
                     </div>
-                  </div>
-                ))
-              )}
-              {isChatLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-lg px-3 py-2">
-                    <div className="flex items-center space-x-2">
-                      <Bot className="h-4 w-4" />
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.1s" }}
-                        ></div>
-                        <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.2s" }}
-                        ></div>
-                      </div>
-                    </div>
+                    <div className="text-xs opacity-70 mt-1">{message.timestamp.toLocaleTimeString()}</div>
                   </div>
                 </div>
-              )}
-            </div>
-          </ScrollArea>
+              ))
+            )}
+            {isChatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-lg px-3 py-2">
+                  <div className="flex items-center space-x-2">
+                    <Bot className="h-4 w-4" />
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "0.1s" }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "0.2s" }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
 
-          {/* Chat Input */}
+        {/* Chat Input */}
           <div className="p-4 border-t border-gray-200 space-y-3">
             {/* Model and Tools Selection Row */}
             <div className="flex items-center justify-between">
@@ -477,19 +474,19 @@ export default function EditorPage() {
             </div>
 
             {/* Chat Input Row */}
-            <form onSubmit={handleChatSubmit} className="flex space-x-2">
+          <form onSubmit={handleChatSubmit} className="flex space-x-2">
               <div className="flex-1 relative">
                 <Textarea
-                  placeholder="Ask me anything..."
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Ask me anything..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault()
                       handleSend()
                     }
                   }}
-                  disabled={isChatLoading}
+              disabled={isChatLoading}
                   className="pr-10 border-none focus-visible:ring-0 resize-none text-sm leading-relaxed"
                   rows={1}
                 />
@@ -518,10 +515,10 @@ export default function EditorPage() {
                   </DropdownMenu>
                 </div>
               </div>
-              <Button type="submit" size="sm" disabled={isChatLoading || !chatInput.trim()}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
+            <Button type="submit" size="sm" disabled={isChatLoading || !chatInput.trim()}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
           </div>
         </div>
       </div>

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { FileText, Plus, Search, MoreHorizontal, Edit, Trash2, Download, LogOut, User } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { apiClient, type Document } from "@/lib/api"
+import Header from "@/components/header"
 
 export default function DashboardPage() {
   const [documents, setDocuments] = useState<Document[]>([])
@@ -74,6 +75,8 @@ export default function DashboardPage() {
     })
   }
 
+  console.log(documents)
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -87,33 +90,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <FileText className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">Doki</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <User className="h-4 w-4 mr-2" />
-                    {user?.name}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header user={user} onLogout={handleLogout} />
 
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
