@@ -93,28 +93,6 @@ export default function LandingPage() {
               </Button>
             </Link>
           </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-2xl mx-auto">
-            <div className="text-center group">
-              <div className="text-3xl font-bold text-gray-900 group-hover:text-blue-400 transition-colors duration-300">
-                10K+
-              </div>
-              <div className="text-gray-400">Documents Created</div>
-            </div>
-            <div className="text-center group">
-              <div className="text-3xl font-bold text-gray-900 group-hover:text-purple-400 transition-colors duration-300">
-                99.9%
-              </div>
-              <div className="text-gray-400">Uptime</div>
-            </div>
-            <div className="text-center group">
-              <div className="text-3xl font-bold text-gray-900 group-hover:text-pink-400 transition-colors duration-300">
-                5M+
-              </div>
-              <div className="text-gray-400">AI Interactions</div>
-            </div>
-          </div>
         </div>
       </section>
 
