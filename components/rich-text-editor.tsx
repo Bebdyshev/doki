@@ -25,6 +25,7 @@ import {
   Redo,
   ChevronDown,
 } from "lucide-react"
+import { KeyboardEvent } from "react"
 
 // Define custom types for Slate
 type CustomElement = {
@@ -413,6 +414,99 @@ export function RichTextEditor({ value, onChange, placeholder = "Start writing..
     onChange(JSON.stringify(newValue))
   }
 
+  const handleKeyDown = (event: KeyboardEvent) => {
+    // Don't handle these shortcuts here - let them bubble up to global handlers
+    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'c') {
+      return // Let global word count dialog handle this
+    }
+    if (event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'k') {
+      return // Let global link dialog handle this
+    }
+
+    // Bold, Italic, Underline
+    if (event.ctrlKey && !event.altKey && !event.metaKey) {
+      switch (event.key.toLowerCase()) {
+        case "b":
+          event.preventDefault()
+          toggleMark(editor, "bold")
+          return
+        case "i":
+          event.preventDefault()
+          toggleMark(editor, "italic")
+          return
+        case "u":
+          event.preventDefault()
+          toggleMark(editor, "underline")
+          return
+        case "z":
+          if (event.shiftKey) {
+            event.preventDefault()
+            ;(editor as unknown as HistoryEditor).redo()
+          }
+          return
+      }
+    }
+
+    // Alignment and lists (Ctrl+Shift)
+    if (event.ctrlKey && event.shiftKey && !event.altKey) {
+      switch (event.key.toLowerCase()) {
+        case "l":
+          event.preventDefault()
+          toggleBlock(editor, "left")
+          return
+        case "e":
+          event.preventDefault()
+          toggleBlock(editor, "center")
+          return
+        case "r":
+          event.preventDefault()
+          toggleBlock(editor, "right")
+          return
+        case "j":
+          event.preventDefault()
+          toggleBlock(editor, "justify")
+          return
+        case "7":
+          event.preventDefault()
+          toggleBlock(editor, "numbered-list")
+          return
+        case "8":
+          event.preventDefault()
+          toggleBlock(editor, "bulleted-list")
+          return
+        case ".":
+          event.preventDefault()
+          // increase font size mark by 2
+          const currentSizeInc = (Editor.marks(editor)?.fontSize as string) || "14"
+          toggleMark(editor, "fontSize", (parseInt(currentSizeInc) + 2).toString())
+          return
+        case ",":
+          event.preventDefault()
+          const currentSizeDec = (Editor.marks(editor)?.fontSize as string) || "14"
+          toggleMark(editor, "fontSize", Math.max(8, parseInt(currentSizeDec) - 2).toString())
+          return
+      }
+    }
+
+    // Headings (Ctrl+Alt+[0-6])
+    if (event.ctrlKey && event.altKey && !event.shiftKey) {
+      const num = parseInt(event.key)
+      if (!isNaN(num) && num >= 0 && num <= 6) {
+        event.preventDefault()
+        if (num === 0) {
+          toggleBlock(editor, "paragraph")
+        } else {
+          const map: Record<number, string> = {
+            1: "heading-one",
+            2: "heading-two",
+            3: "heading-three",
+          }
+          toggleBlock(editor, map[num] || "paragraph")
+        }
+      }
+    }
+  }
+
   return (
     <div className="bg-white">
       <Slate editor={editor} initialValue={editorValue} onChange={handleChange}>
@@ -436,6 +530,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Start writing..
                 placeholder={placeholder}
                 spellCheck
                 autoFocus
+                onKeyDown={handleKeyDown}
                 className="outline-none w-full h-full leading-relaxed overflow-y-auto"
                 style={{ 
                   fontFamily: "Arial, sans-serif", 

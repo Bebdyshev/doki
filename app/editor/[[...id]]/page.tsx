@@ -31,6 +31,9 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { RichTextEditor } from "@/components/rich-text-editor"
 import { apiClient, type Document } from "@/lib/api"
+import Header from "@/components/header"
+import { WordCountDialog } from "@/components/dialogs/word-count-dialog"
+import { LinkDialog } from "@/components/dialogs/link-dialog"
 
 interface ChatMessage {
   role: "user" | "assistant"
@@ -58,6 +61,9 @@ export default function EditorPage() {
   const [selectedTools, setSelectedTools] = useState<string[]>([])
   const [documentsList, setDocumentsList] = useState<Document[]>([])
   const [selectedKnowledgeDoc, setSelectedKnowledgeDoc] = useState<Document | null>(null)
+  const [user, setUser] = useState<any>(null)
+  const [showWordCount, setShowWordCount] = useState(false)
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const [sidebarWidth, setSidebarWidth] = useState(384) // default 24rem (w-96)
   const isResizingRef = useRef(false)
@@ -79,6 +85,12 @@ export default function EditorPage() {
 
     // Load user's documents for knowledge base selector
     ;(async () => {
+      // Load user data
+      const userResponse = await apiClient.getMe()
+      if (userResponse.data) {
+        setUser(userResponse.data)
+      }
+
       const res = await apiClient.getDocuments()
       if (res.data) {
         setDocumentsList(res.data)
@@ -232,6 +244,39 @@ export default function EditorPage() {
     setChatInput(actions[action as keyof typeof actions] || action)
   }
 
+  const handleLogout = async () => {
+    await apiClient.logout()
+    router.push("/")
+  }
+
+  const handleInsertLink = (url: string, text?: string) => {
+    // This would integrate with the rich text editor
+    // For now, we'll just log it
+    console.log("Insert link:", { url, text })
+  }
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault()
+        e.stopPropagation()
+        setShowWordCount(true)
+        return
+      }
+      if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        e.stopPropagation()
+        setShowLinkDialog(true)
+        return
+      }
+    }
+
+    // Use capture phase to ensure these shortcuts are handled before other handlers
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
+  }, [])
+
   const handleMouseMove = (e: MouseEvent) => {
     if (!isResizingRef.current) return
     const newWidth = Math.min(600, Math.max(260, window.innerWidth - e.clientX))
@@ -262,44 +307,44 @@ export default function EditorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col overflow-hidden">
-      {/* Header across entire width */}
-      <header className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+      {/* Document Title Bar */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <div className="flex items-center space-x-2">
+            <FileText className="h-5 w-5 text-blue-600" />
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="border-none text-lg font-medium bg-transparent focus-visible:ring-0 px-0"
+              placeholder="Untitled Document"
+            />
+            <Button variant="ghost" size="sm">
+              <Star className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center space-x-4">
+          {lastSaved && <span className="text-sm text-gray-500">Saved {lastSaved.toLocaleTimeString()}</span>}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
               </Button>
-              <div className="flex items-center space-x-2">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="border-none text-lg font-medium bg-transparent focus-visible:ring-0 px-0"
-                  placeholder="Untitled Document"
-                />
-                <Button variant="ghost" size="sm">
-                  <Star className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              {lastSaved && <span className="text-sm text-gray-500">Saved {lastSaved.toLocaleTimeString()}</span>}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
               <DropdownMenuItem onClick={() => document && apiClient.exportDocument(document.id, "pdf")}>Export as PDF</DropdownMenuItem>
               <DropdownMenuItem onClick={() => document && apiClient.exportDocument(document.id, "docx")}>Export as DOCX</DropdownMenuItem>
               <DropdownMenuItem onClick={() => document && apiClient.exportDocument(document.id, "txt")}>Export as TXT</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {isSaving && <RefreshCw className="h-4 w-4 animate-spin text-gray-500" />}
-          </div>
-        </header>
+        </div>
+      </div>
 
       {/* Content Row */}
       <div className="flex flex-1 overflow-auto">
@@ -522,6 +567,18 @@ export default function EditorPage() {
           </div>
         </div>
       </div>
+
+      {/* Dialogs */}
+      <WordCountDialog 
+        open={showWordCount} 
+        onOpenChange={setShowWordCount} 
+        content={content} 
+      />
+      <LinkDialog 
+        open={showLinkDialog} 
+        onOpenChange={setShowLinkDialog} 
+        onInsertLink={handleInsertLink} 
+      />
     </div>
   )
 }

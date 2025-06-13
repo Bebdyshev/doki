@@ -1,5 +1,19 @@
 import { useEffect, useRef } from "react"
 
+// Type declaration for Google Identity Services
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: any) => void
+          renderButton: (element: HTMLElement, config: any) => void
+        }
+      }
+    }
+  }
+}
+
 interface GoogleLoginButtonProps {
   onSuccess: (credential: string) => void
   buttonText?: string
