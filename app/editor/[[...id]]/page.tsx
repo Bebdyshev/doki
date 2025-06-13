@@ -350,8 +350,15 @@ export default function EditorPage() {
       <div className="flex flex-1 overflow-auto">
         {/* Main Editor */}
         <div className="flex-1 overflow-hidden">
-              <RichTextEditor value={content} onChange={setContent} placeholder="Start writing your document..." />
+          <div className="h-full max-h-[calc(100vh - 50px)] overflow-y-auto">
+            <RichTextEditor
+              value={content}
+              onChange={setContent}
+              placeholder="Start writing your document..."
+            />
+          </div>
         </div>
+
 
         {/* Resizer */}
         <div
