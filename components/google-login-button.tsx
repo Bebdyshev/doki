@@ -54,9 +54,10 @@ export default function GoogleLoginButton({ onSuccess, buttonText = "Continue wi
       })
       window.google.accounts.id.renderButton(divRef.current, {
         type: "standard",
-        theme: "filled_blue",
+        theme: "filled_white",
         size: "large",
         text: buttonText,
+        border: true,
       })
     }
   }, [onSuccess, buttonText])
