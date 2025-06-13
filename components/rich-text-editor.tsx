@@ -370,7 +370,7 @@ const ColorButton = memo(() => {
         <div className="p-2">
           <div className="text-xs font-medium mb-2">Text Color</div>
           <div className="grid grid-cols-8 gap-1 mb-3">
-            {[
+          {[
               "#000000", "#434343", "#666666", "#999999", "#b7b7b7", "#cccccc", "#d9ead3", "#fce5cd",
               "#fff2cc", "#f4cccc", "#d0e0e3", "#c9daf8", "#34a853", "#ff9900", "#fbbc04", "#ea4335",
               "#4285f4", "#9900ff", "#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff"
@@ -748,7 +748,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Start writing..
   const handleChange = useCallback((newValue: Descendant[]) => {
     // Immediate local state update for instant typing
     setEditorValue(newValue)
-    
+
     // Batch parent updates with requestAnimationFrame
     if (parentUpdateRef.current) {
       cancelAnimationFrame(parentUpdateRef.current)
@@ -859,7 +859,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Start writing..
           event.preventDefault()
           indentListItem(editor)
           return
-      }
+    }
     }
 
     // Alignment and lists (Ctrl+Shift)
@@ -1007,7 +1007,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Start writing..
                       lineHeight: "1.6",
                       minHeight: "9in",
                     }}
-                  />
+          />
                   
                   <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-xs text-gray-500">
                     {index + 2}
