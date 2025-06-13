@@ -278,9 +278,9 @@ const MarkButton = memo(({ format, icon, tooltip }: { format: string; icon: Reac
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
+    <Button
           variant={isActive ? "default" : "ghost"}
-          size="sm"
+      size="sm"
           className="h-8 w-8 p-0"
           onMouseDown={handleMouseDown}
         >
@@ -299,7 +299,7 @@ const BlockButton = memo(({ format, icon, tooltip }: { format: string; icon: Rea
   const isActive = isBlockActive(editor, format, TEXT_ALIGN_TYPES.includes(format) ? "align" : "type")
   
   const handleMouseDown = useCallback((event: React.MouseEvent) => {
-    event.preventDefault()
+        event.preventDefault()
     toggleBlock(editor, format)
   }, [editor, format])
 
@@ -311,9 +311,9 @@ const BlockButton = memo(({ format, icon, tooltip }: { format: string; icon: Rea
           size="sm"
           className="h-8 w-8 p-0"
           onMouseDown={handleMouseDown}
-        >
-          {icon}
-        </Button>
+    >
+      {icon}
+    </Button>
       </TooltipTrigger>
       <TooltipContent>
         <p>{tooltip}</p>
@@ -334,14 +334,14 @@ const ListButton = memo(({ format, icon, tooltip }: { format: "numbered-list" | 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
+    <Button
           variant={currentListType === format ? "default" : "ghost"}
-          size="sm"
+      size="sm"
           className="h-8 w-8 p-0"
           onMouseDown={handleMouseDown}
-        >
-          {icon}
-        </Button>
+    >
+      {icon}
+    </Button>
       </TooltipTrigger>
       <TooltipContent>
         <p>{tooltip}</p>
@@ -387,14 +387,14 @@ const ColorButton = memo(() => {
           <div className="grid grid-cols-8 gap-1">
             {[
               "#ffeb3b", "#4caf50", "#2196f3", "#ff9800", "#f44336", "#9c27b0", "#607d8b", "#795548"
-            ].map((color) => (
-              <button
-                key={color}
-                className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
-                style={{ backgroundColor: color }}
+          ].map((color) => (
+            <button
+              key={color}
+              className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+              style={{ backgroundColor: color }}
                 onMouseDown={handleColorClick(color, true)}
-              />
-            ))}
+            />
+          ))}
           </div>
         </div>
       </DropdownMenuContent>
@@ -443,19 +443,19 @@ const FontSizeSelect = memo(() => {
   return (
     <Select value={currentSize} onValueChange={handleSizeChange}>
       <SelectTrigger className="w-16 h-8 text-sm">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="8">8</SelectItem>
-        <SelectItem value="9">9</SelectItem>
-        <SelectItem value="10">10</SelectItem>
-        <SelectItem value="11">11</SelectItem>
-        <SelectItem value="12">12</SelectItem>
-        <SelectItem value="14">14</SelectItem>
-        <SelectItem value="16">16</SelectItem>
-        <SelectItem value="18">18</SelectItem>
-        <SelectItem value="24">24</SelectItem>
-        <SelectItem value="36">36</SelectItem>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="8">8</SelectItem>
+            <SelectItem value="9">9</SelectItem>
+            <SelectItem value="10">10</SelectItem>
+            <SelectItem value="11">11</SelectItem>
+            <SelectItem value="12">12</SelectItem>
+            <SelectItem value="14">14</SelectItem>
+            <SelectItem value="16">16</SelectItem>
+            <SelectItem value="18">18</SelectItem>
+            <SelectItem value="24">24</SelectItem>
+            <SelectItem value="36">36</SelectItem>
         <SelectItem value="48">48</SelectItem>
         <SelectItem value="72">72</SelectItem>
       </SelectContent>
@@ -606,8 +606,8 @@ const Toolbar = memo(() => {
               <SelectItem value="125%">125%</SelectItem>
               <SelectItem value="150%">150%</SelectItem>
               <SelectItem value="200%">200%</SelectItem>
-            </SelectContent>
-          </Select>
+          </SelectContent>
+        </Select>
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -625,7 +625,7 @@ const Toolbar = memo(() => {
           <FontFamilySelect />
           <FontSizeSelect />
 
-          <Separator orientation="vertical" className="h-6 mx-1" />
+        <Separator orientation="vertical" className="h-6 mx-1" />
 
           {/* Text formatting */}
           <MarkButton format="bold" icon={<Bold className="h-4 w-4" />} tooltip="Bold (⌘B)" />
@@ -633,11 +633,11 @@ const Toolbar = memo(() => {
           <MarkButton format="underline" icon={<Underline className="h-4 w-4" />} tooltip="Underline (⌘U)" />
           <MarkButton format="strikethrough" icon={<Strikethrough className="h-4 w-4" />} tooltip="Strikethrough" />
 
-          <ColorButton />
+        <ColorButton />
 
-          <Separator orientation="vertical" className="h-6 mx-1" />
+        <Separator orientation="vertical" className="h-6 mx-1" />
 
-          {/* Alignment */}
+        {/* Alignment */}
           <BlockButton format="left" icon={<AlignLeft className="h-4 w-4" />} tooltip="Align left (⌘⇧L)" />
           <BlockButton format="center" icon={<AlignCenter className="h-4 w-4" />} tooltip="Align center (⌘⇧E)" />
           <BlockButton format="right" icon={<AlignRight className="h-4 w-4" />} tooltip="Align right (⌘⇧R)" />
@@ -689,16 +689,16 @@ const Toolbar = memo(() => {
             <TooltipContent><p>Increase indent (⌘])</p></TooltipContent>
           </Tooltip>
 
-          <Separator orientation="vertical" className="h-6 mx-1" />
+        <Separator orientation="vertical" className="h-6 mx-1" />
 
-          {/* Lists */}
+        {/* Lists */}
           <ListButton format="bulleted-list" icon={<List className="h-4 w-4" />} tooltip="Bulleted list (⌘⇧8)" />
           <ListButton format="numbered-list" icon={<ListOrdered className="h-4 w-4" />} tooltip="Numbered list (⌘⇧7)" />
 
-          <Separator orientation="vertical" className="h-6 mx-1" />
+        <Separator orientation="vertical" className="h-6 mx-1" />
 
           {/* Insert and format */}
-          <LinkButton />
+        <LinkButton />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -965,12 +965,12 @@ export function RichTextEditor({ value, onChange, placeholder = "Start writing..
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                 }}
               >
-                <Editable
-                  renderElement={renderElement}
-                  renderLeaf={renderLeaf}
-                  placeholder={placeholder}
-                  spellCheck
-                  autoFocus
+          <Editable
+            renderElement={renderElement}
+            renderLeaf={renderLeaf}
+            placeholder={placeholder}
+            spellCheck
+            autoFocus
                   onKeyDown={handleKeyDown}
                   className="outline-none w-full leading-relaxed resize-none"
                   style={{ 

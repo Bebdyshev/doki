@@ -27,6 +27,8 @@ import {
   ChevronDown,
   Sparkles,
   AtSign,
+  History,
+  Plus,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { RichTextEditor } from "@/components/rich-text-editor"
@@ -41,6 +43,18 @@ interface ChatMessage {
   timestamp: Date
 }
 
+interface Conversation {
+  id: string
+  title?: string
+  created_at: string
+  updated_at: string
+  messages: Array<{
+    role: "user" | "assistant"
+    content: string
+    timestamp: string
+  }>
+}
+
 export default function EditorPage() {
   const params = useParams()
   const router = useRouter()
@@ -53,11 +67,14 @@ export default function EditorPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Chat state
+  // Enhanced chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState("")
   const [isChatLoading, setIsChatLoading] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null)
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false)
   const [selectedTools, setSelectedTools] = useState<string[]>([])
   const [documentsList, setDocumentsList] = useState<Document[]>([])
   const [selectedKnowledgeDoc, setSelectedKnowledgeDoc] = useState<Document | null>(null)
@@ -73,6 +90,22 @@ export default function EditorPage() {
     { id: "web_search", name: "Web Search", icon: Globe, description: "Search the web for information" },
     { id: "file_analysis", name: "File Analysis", icon: FileCode, description: "Analyze document structure" },
   ]
+
+  // Load stored conversation ID from localStorage
+  useEffect(() => {
+    const storedConversationId = localStorage.getItem(`conversation_${documentId || 'new'}`)
+    if (storedConversationId) {
+      setConversationId(storedConversationId)
+    }
+  }, [documentId])
+
+  // Load conversations and conversation history
+  useEffect(() => {
+    loadConversations()
+    if (conversationId) {
+      loadConversationHistory(conversationId)
+    }
+  }, [conversationId])
 
   useEffect(() => {
     if (documentId) {
@@ -132,6 +165,56 @@ export default function EditorPage() {
     setIsLoading(false)
   }
 
+  // Load user's conversations
+  const loadConversations = async () => {
+    setIsLoadingConversations(true)
+    try {
+      const response = await apiClient.getConversations()
+      if (response.data) {
+        setConversations(response.data as Conversation[])
+      }
+    } catch (error) {
+      console.error("Failed to load conversations:", error)
+    }
+    setIsLoadingConversations(false)
+  }
+
+  // Load specific conversation history
+  const loadConversationHistory = async (convId: string) => {
+    try {
+      const response = await apiClient.getConversation(convId)
+      if (response.data) {
+        const conversationData = response.data as Conversation
+        setCurrentConversation(conversationData)
+        // Convert backend messages to local format
+        const messages: ChatMessage[] = conversationData.messages.map((msg: any) => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp)
+        }))
+        setChatMessages(messages)
+      }
+    } catch (error) {
+      console.error("Failed to load conversation history:", error)
+    }
+  }
+
+  // Start a new conversation
+  const startNewConversation = () => {
+    setConversationId(null)
+    setCurrentConversation(null)
+    setChatMessages([])
+    localStorage.removeItem(`conversation_${documentId || 'new'}`)
+  }
+
+  // Select an existing conversation
+  const selectConversation = (conversation: Conversation) => {
+    setConversationId(conversation.id)
+    setCurrentConversation(conversation)
+    localStorage.setItem(`conversation_${documentId || 'new'}`, conversation.id)
+    loadConversationHistory(conversation.id)
+  }
+
   const handleSave = async (isAutoSave = false) => {
     if (!title.trim() && !content.trim()) return
 
@@ -161,7 +244,7 @@ export default function EditorPage() {
     setIsSaving(false)
   }
 
-  // Send chat message
+  // Enhanced send chat message with proper conversation handling
   const handleSend = async () => {
     if (!chatInput.trim() || isChatLoading) return
 
@@ -191,16 +274,19 @@ export default function EditorPage() {
         ? `Document context: "${title}"\n\nContent: ${plainTextContent.substring(0, 1000)}${plainTextContent.length > 1000 ? "..." : ""}`
         : "No document content available."
 
-      let systemPrompt = `You are an AI assistant helping with document editing. Here's the current document context: ${contextMessage}`
+      let messageContent = userMessage.content
       if (selectedKnowledgeDoc && typeof selectedKnowledgeDoc.id === 'number') {
-        userMessage.content += `\n\nInstruction: Use knowledgebase_tool with document_id=${selectedKnowledgeDoc.id}`
+        messageContent += `\n\nInstruction: Use knowledgebase_tool with document_id=${selectedKnowledgeDoc.id}`
       }
+
+      // For conversation continuation, send only the current message
+      // The backend will handle conversation history with the conversation_id
       const messages: {role: string; content: string}[] = [
         {
           role: "system",
-          content: systemPrompt,
+          content: `You are an AI assistant helping with document editing. Here's the current document context: ${contextMessage}`,
         },
-        { role: "user", content: userMessage.content },
+        { role: "user", content: messageContent },
       ]
 
       const response = await apiClient.chat(messages, conversationId || undefined)
@@ -213,7 +299,14 @@ export default function EditorPage() {
         }
 
         setChatMessages((prev) => [...prev, assistantMessage])
-        setConversationId(response.data.conversation_id)
+        
+        // Store conversation ID for continuation
+        const newConversationId = response.data.conversation_id
+        setConversationId(newConversationId)
+        localStorage.setItem(`conversation_${documentId || 'new'}`, newConversationId)
+        
+        // Reload conversations to get the updated list
+        loadConversations()
       }
     } catch (error) {
       console.error("Chat failed:", error)
@@ -373,6 +466,57 @@ export default function EditorPage() {
           className="bg-white border-l border-gray-200 flex flex-col overflow-auto min-h-0"
           style={{ width: sidebarWidth, height: 'calc(100vh - 64px)' }}
         >
+          {/* Chat Header with Conversation Selector */}
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-sm">Chat Assistant</h3>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 px-2">
+                    <History className="h-3 w-3 mr-1" />
+                    Conversations
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80 max-h-64 overflow-auto">
+                  <DropdownMenuItem onClick={startNewConversation} className="flex items-center space-x-2">
+                    <Plus className="h-4 w-4" />
+                    <span>New Conversation</span>
+                  </DropdownMenuItem>
+                  {conversations.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-xs font-medium text-gray-500 border-t">
+                        Recent Conversations
+                      </div>
+                      {conversations.slice(0, 10).map((conv) => (
+                        <DropdownMenuItem
+                          key={conv.id}
+                          onClick={() => selectConversation(conv)}
+                          className={`flex flex-col items-start space-y-1 ${
+                            conversationId === conv.id ? 'bg-blue-50' : ''
+                          }`}
+                        >
+                          <span className="text-sm font-medium">
+                            {conv.title || `Conversation ${conv.id.slice(0, 8)}...`}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(conv.updated_at).toLocaleDateString()}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            
+            {currentConversation && (
+              <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                <span className="font-medium">Current:</span> {currentConversation.title || `Conversation ${currentConversation.id.slice(0, 8)}...`}
+              </div>
+            )}
+          </div>
+
         {/* Chat Messages */}
         <ScrollArea className="flex-1 p-4" ref={chatScrollRef}>
           <div className="space-y-4">

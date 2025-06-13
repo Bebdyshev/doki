@@ -9,7 +9,6 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Doki",
   description: "AI-powered document management and editing platform",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({
